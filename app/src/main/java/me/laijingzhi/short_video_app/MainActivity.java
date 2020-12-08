@@ -41,6 +41,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
         MainIcon=mMenuMain.findViewById(R.id.img_main);
         MeIcon=mMenuMe.findViewById(R.id.img_me);
+        MeIcon.setImageResource(R.mipmap.nav_me_normal);
         MainIcon.setImageResource(R.mipmap.nav_main_click);
     }
 
