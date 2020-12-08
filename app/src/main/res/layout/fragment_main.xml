@@ -12,16 +12,20 @@
         android:orientation="horizontal">
 
         <Button
+            android:layout_marginRight="10dp"
+            android:layout_marginLeft="5dp"
             android:id="@+id/btn"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="选择视频" />
 
         <Button
+            android:layout_marginRight="10dp"
+            android:layout_marginLeft="10dp"
             android:id="@+id/btn2"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="录取视频" />
+            android:text="录制视频" />
 
         <Spinner
             android:id="@+id/selector"

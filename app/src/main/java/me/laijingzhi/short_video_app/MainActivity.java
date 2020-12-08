@@ -56,7 +56,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                         .commit();
                 MainIcon.setImageResource(R.mipmap.nav_main_click);
                 MeIcon.setImageResource(R.mipmap.nav_me_normal);
-
                 break;
             case R.id.menu_me:
                 this.getSupportFragmentManager()
