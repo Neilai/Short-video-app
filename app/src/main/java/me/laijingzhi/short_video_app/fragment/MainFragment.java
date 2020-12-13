@@ -2,13 +2,16 @@ package me.laijingzhi.short_video_app.fragment;
 
 import android.Manifest;
 import android.app.Activity;
+import android.app.AlertDialog;
 import android.content.ContentResolver;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.database.Cursor;
 import android.graphics.Bitmap;
+import android.graphics.drawable.ColorDrawable;
 import android.hardware.Camera;
 import android.media.MediaMetadataRetriever;
 import android.media.ThumbnailUtils;
@@ -17,6 +20,7 @@ import android.os.Bundle;
 import android.provider.MediaStore;
 import android.provider.OpenableColumns;
 import android.util.Log;
+import android.view.KeyEvent;
 import android.view.LayoutInflater;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
@@ -24,6 +28,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
+import android.widget.Button;
 import android.widget.Spinner;
 import android.widget.VideoView;
 
@@ -41,8 +46,10 @@ import java.io.ByteArrayOutputStream;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.ArrayList;
+import java.util.List;
 
-import me.laijingzhi.short_video_app.PathUtil;
+import me.laijingzhi.short_video_app.CameraActivity;
 import me.laijingzhi.short_video_app.R;
 import me.laijingzhi.short_video_app.VideoList.Adapter;
 import me.laijingzhi.short_video_app.api.VideoService;
@@ -61,6 +68,10 @@ import static android.app.Activity.RESULT_OK;
 import static android.content.Context.MODE_PRIVATE;
 
 public class MainFragment extends Fragment {
+    String[] permissions = new String[]{Manifest.permission.CAMERA,
+            Manifest.permission.RECORD_AUDIO, Manifest.permission.WRITE_EXTERNAL_STORAGE};
+    List<String> mPermissionList = new ArrayList<>();
+    private final int mRequestCode = 100;
 
     private final Retrofit retrofit = new Retrofit.Builder()
             .baseUrl("https://api-sjtu-camp.bytedance.com/")
@@ -70,6 +81,7 @@ public class MainFragment extends Fragment {
     private Adapter videoAdapter = new Adapter();
     private SwipeRefreshLayout mSwipeView;
     private Spinner spinner;
+    private AlertDialog alertDialog;
     boolean showMe = false;
     String idStr;
     String nameStr;
@@ -114,15 +126,29 @@ public class MainFragment extends Fragment {
         view.findViewById(R.id.btn2).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                Intent intent = new Intent(MediaStore.ACTION_VIDEO_CAPTURE);
-                startActivityForResult(intent, 2);
+//                Intent intent = new Intent(MediaStore.ACTION_VIDEO_CAPTURE);
+//                startActivityForResult(intent, 2);
+                startActivity(new Intent(getActivity(), CameraActivity.class));
             }
         });
 
-        if (ContextCompat.checkSelfPermission(view.getContext(), Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions(getActivity(), new String[]{
-                    Manifest.permission.CAMERA}, 0
-            );
+
+
+//        if (ContextCompat.checkSelfPermission(view.getContext(), Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
+//            ActivityCompat.requestPermissions(getActivity(), new String[]{
+//                    Manifest.permission.CAMERA}, 0
+//            );
+//        }
+
+        mPermissionList.clear();
+        for (int i = 0; i < permissions.length; i++) {
+            if (ContextCompat.checkSelfPermission(view.getContext(), permissions[i])
+                    != PackageManager.PERMISSION_GRANTED) {
+                mPermissionList.add(permissions[i]);
+            }
+        }
+        if (mPermissionList.size() > 0) {//有权限没有通过，需要申请
+            ActivityCompat.requestPermissions(getActivity(), permissions, mRequestCode);
         }
 
         spinner = view.findViewById(R.id.selector);
@@ -153,44 +179,54 @@ public class MainFragment extends Fragment {
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        boolean hasPermissionDismiss = false;
+        if (mRequestCode == requestCode) {
+            for (int i = 0; i < grantResults.length; i++) {
+                if (grantResults[i] == -1) {
+                    hasPermissionDismiss = true;
+                }
+            }
+            //如果有权限没有被允许
+            if (hasPermissionDismiss) {
+                return; // 直接关闭页面，不让他继续访问
+            }
+        }
     }
 
+    void uploadVideo(Uri uri) {
+        showLoadingDialog();
+        InputStream is = null;
+        ContentResolver contentResolver = this.getContext().getContentResolver();
+        try {
+            is = contentResolver.openInputStream(uri);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        VideoService service = retrofit.create(VideoService.class);
+        Call<PostResponse>
+                call = service.addVideo("", idStr, nameStr, getMultipartFromBitMap("cover_image", "pic.png", createVideoThumbnail(this.getContext(), uri)), getMultipartFromStream("video", "video.mp4", is));
+        call.enqueue(new Callback<PostResponse>() {
+            @Override
+            public void onResponse(final Call<PostResponse> call, final Response<PostResponse> response) {
+                requestAllVideos();
+                dismissLoadingDialog();
+            }
+
+            @Override
+            public void onFailure(final Call<PostResponse> call, final Throwable t) {
+                t.printStackTrace();
+                dismissLoadingDialog();
+            }
+        });
+
+    }
 
     public void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
-        InputStream is = null;
         if (requestCode == 1 && resultCode == RESULT_OK) {
             Uri uri = data.getData();
-            String filePath = "";
-//            try {
-//                filePath = PathUtil.getPath(this.getContext(), uri);
-//                is = new FileInputStream(filePath);
-//            } catch (Exception e) {
-//                e.printStackTrace();
-//            }
-            ContentResolver contentResolver = this.getContext().getContentResolver();
-            try {
-                is = contentResolver.openInputStream(uri);
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-            VideoService service = retrofit.create(VideoService.class);
-            Call<PostResponse>
-//                    call = service.addVideo("", idStr, nameStr, getMultipartFromBitMap("cover_image", "pic.png", getVideoThumbnail(filePath, 96, 96, MediaStore.Video.Thumbnails.MINI_KIND)), getMultipartFromStream("video", "video.mp4", is));
-                    call = service.addVideo("", idStr, nameStr, getMultipartFromBitMap("cover_image", "pic.png", createVideoThumbnail(this.getContext(), uri)), getMultipartFromStream("video", "video.mp4", is));
-            call.enqueue(new Callback<PostResponse>() {
-                @Override
-                public void onResponse(final Call<PostResponse> call, final Response<PostResponse> response) {
-                    requestAllVideos();
-                }
-
-                @Override
-                public void onFailure(final Call<PostResponse> call, final Throwable t) {
-                    t.printStackTrace();
-                }
-            });
-        } else if (requestCode == 2 && resultCode == RESULT_OK) {
-
+            if (uri != null)
+                uploadVideo(uri);
         }
     }
 
@@ -199,17 +235,6 @@ public class MainFragment extends Fragment {
         bm.compress(Bitmap.CompressFormat.PNG, 100, baos);
         return baos.toByteArray();
     }
-
-    private static Bitmap getVideoThumbnail(String videoPath, int width, int height, int kind) {
-        Bitmap bitmap = null;
-        bitmap = ThumbnailUtils.createVideoThumbnail(videoPath, kind); //調用ThumbnailUtils類的靜態方法createVideoThumbnail獲取視頻的截圖；
-        if (bitmap != null) {
-            bitmap = ThumbnailUtils.extractThumbnail(bitmap, width, height,
-                    ThumbnailUtils.OPTIONS_RECYCLE_INPUT);//調用ThumbnailUtils類的靜態方法extractThumbnail將原圖片（即上方截取的圖片）轉化為指定大小；
-        }
-        return bitmap;
-    }
-
 
     private void requestAllVideos() {
         mSwipeView.setRefreshing(true);
@@ -275,5 +300,28 @@ public class MainFragment extends Fragment {
             }
         }
         return bitmap;
+    }
+
+    public void showLoadingDialog() {
+        alertDialog = new AlertDialog.Builder(getActivity()).create();
+        alertDialog.getWindow().setBackgroundDrawable(new ColorDrawable());
+        alertDialog.setCancelable(false);
+        alertDialog.setOnKeyListener(new DialogInterface.OnKeyListener() {
+            @Override
+            public boolean onKey(DialogInterface dialog, int keyCode, KeyEvent event) {
+                if (keyCode == KeyEvent.KEYCODE_SEARCH || keyCode == KeyEvent.KEYCODE_BACK)
+                    return true;
+                return false;
+            }
+        });
+        alertDialog.show();
+        alertDialog.setContentView(R.layout.loading_alert);
+        alertDialog.setCanceledOnTouchOutside(false);
+    }
+
+    public void dismissLoadingDialog() {
+        if (null != alertDialog && alertDialog.isShowing()) {
+            alertDialog.dismiss();
+        }
     }
 }

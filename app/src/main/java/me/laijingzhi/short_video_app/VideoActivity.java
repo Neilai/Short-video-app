@@ -13,8 +13,6 @@ import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 
 public class VideoActivity extends AppCompatActivity {
-    private Button buttonPlay;
-    private Button buttonPause;
     private VideoView videoView;
 
     @Override

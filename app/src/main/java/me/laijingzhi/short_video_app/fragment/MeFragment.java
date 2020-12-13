@@ -30,7 +30,7 @@ public class MeFragment extends Fragment {
         nameStr = share.getString("name", "");
         TextView idTxt = view.findViewById(R.id.txt_id);
         TextView nameTxt = view.findViewById(R.id.txt_name);
-        nameTxt.setText("用户名" + nameStr);
+        nameTxt.setText(nameStr);
         idTxt.setText("ID:" + idStr);
 
         Button btn = view.findViewById(R.id.log_out);

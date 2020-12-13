@@ -26,6 +26,9 @@ public class Video{
     @SerializedName("image_h")
     private int  imageH;
 
+    @SerializedName("createdAt")
+    private String createdAt;
+
     public String getId() {
         return id;
     }
@@ -53,4 +56,8 @@ public class Video{
     public int getImageH() {
         return imageH;
     }
+
+    public String getCreatedAt() { return createdAt; }
+
+    public String getTime() { return createdAt.substring(0, 10); }
 }

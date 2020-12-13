@@ -41,8 +41,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
         MainIcon=mMenuMain.findViewById(R.id.img_main);
         MeIcon=mMenuMe.findViewById(R.id.img_me);
-        MeIcon.setImageResource(R.mipmap.nav_me_normal);
-        MainIcon.setImageResource(R.mipmap.nav_main_click);
+        MeIcon.setImageResource(R.drawable.nav_me_normal);
+        MainIcon.setImageResource(R.drawable.nav_main_click);
     }
 
     @Override
@@ -54,8 +54,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                         .show(mMainFragment)
                         .hide(mMeFragment)
                         .commit();
-                MainIcon.setImageResource(R.mipmap.nav_main_click);
-                MeIcon.setImageResource(R.mipmap.nav_me_normal);
+                MainIcon.setImageResource(R.drawable.nav_main_click);
+                MeIcon.setImageResource(R.drawable.nav_me_normal);
                 break;
             case R.id.menu_me:
                 this.getSupportFragmentManager()
@@ -63,8 +63,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                         .hide(mMainFragment)
                         .show(mMeFragment)
                         .commit();
-                MeIcon.setImageResource(R.mipmap.nav_me_click);
-                MainIcon.setImageResource(R.mipmap.nav_main_normal);
+                MeIcon.setImageResource(R.drawable.nav_me_click);
+                MainIcon.setImageResource(R.drawable.nav_main_normal);
                 break;
         }
     }

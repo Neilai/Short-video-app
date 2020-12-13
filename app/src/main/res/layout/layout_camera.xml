@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@android:color/black">
+
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content">
+
+        <SurfaceView
+            android:id="@+id/surfaceView"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content" />
+
+    </FrameLayout>
+
+    <RelativeLayout
+        android:id="@+id/homecamera_bottom_relative"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="#00ffffff"
+        android:layout_alignParentBottom="true">
+
+        <me.laijingzhi.short_video_app.BothWayProgressBar
+            android:id="@+id/main_progress_bar"
+            android:layout_width="match_parent"
+            android:layout_height="2dp"
+            android:background="#00000000"/>
+
+        // 拍照
+        <ImageView
+            android:id="@+id/camera_control"
+            android:layout_width="70dp"
+            android:layout_height="70dp"
+            android:scaleType="centerInside"
+            android:layout_marginBottom="20dp"
+            android:layout_centerInParent="true"
+            android:background="@drawable/btn_camera_taking" />
+
+    </RelativeLayout>
+
+    <LinearLayout
+        android:id="@+id/home_custom_top_relative"
+        android:layout_marginTop="5dp"
+        android:layout_width="match_parent"
+        android:layout_height="50dp"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:background="#00ffffff"
+        android:layout_alignParentTop="true"
+        >
+
+        // 切换闪光灯
+        <ImageView
+            android:id="@+id/camera_light"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:padding="8dp"
+            android:src="@drawable/btn_camera_lighting_off" />
+
+        <View
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="5"/>
+
+        // 前/后 镜头
+        <ImageView
+            android:id="@+id/camera_turn"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:padding="8dp"
+            android:src="@drawable/btn_camera_turning" />
+
+    </LinearLayout>
+
+</RelativeLayout>

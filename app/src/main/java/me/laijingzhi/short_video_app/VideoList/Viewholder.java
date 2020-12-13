@@ -18,18 +18,21 @@ import me.laijingzhi.short_video_app.VideoActivity;
 public class Viewholder extends RecyclerView.ViewHolder implements View.OnClickListener {
 
     private TextView videoName;
+    private TextView videoTime;
     private ImageView coverImage;
     private String videoSrc;
 
     public Viewholder(@NonNull View itemView) {
         super(itemView);
         videoName = itemView.findViewById(R.id.video_name);
+        videoTime = itemView.findViewById(R.id.video_time);
         coverImage = itemView.findViewById(R.id.cover_image);
         itemView.setOnClickListener(this);
     }
 
-    public void bind(String text, String src, String url) {
-        videoName.setText(text);
+    public void bind(String text1, String text2, String src, String url) {
+        videoName.setText(text1);
+        videoTime.setText(text2);
         Glide.with(coverImage.getContext()).load(src).into(coverImage);
         videoSrc = url;
     }

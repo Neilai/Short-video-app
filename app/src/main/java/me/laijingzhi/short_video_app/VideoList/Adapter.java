@@ -25,7 +25,7 @@ public class Adapter extends RecyclerView.Adapter<Viewholder> {
 
     @Override
     public void onBindViewHolder(@NonNull Viewholder holder, int position) {
-        holder.bind(mItems.get(position).getUserName(),mItems.get(position).getImageUrl(),mItems.get(position).getVideoUrl());
+        holder.bind(mItems.get(position).getUserName(),mItems.get(position).getTime(),mItems.get(position).getImageUrl(),mItems.get(position).getVideoUrl());
     }
 
     @Override

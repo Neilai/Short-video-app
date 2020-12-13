@@ -4,13 +4,15 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:padding="16dp"
+    android:padding="60dp"
     tools:context="me.laijingzhi.short_video_app.LoginActivity">
 
-    <View
+    <ImageView
+        android:layout_margin="20dp"
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:layout_weight="1"/>
+        android:layout_weight="2"
+        android:src="@drawable/ic_tiktok"/>
 
     <EditText
         android:id="@+id/user_name"
@@ -23,6 +25,7 @@
         android:id="@+id/student_id"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:layout_gravity="center"
         android:hint="ID" />
 
     <Button
@@ -34,6 +37,6 @@
     <View
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:layout_weight="2"/>
+        android:layout_weight="1"/>
 
 </LinearLayout>

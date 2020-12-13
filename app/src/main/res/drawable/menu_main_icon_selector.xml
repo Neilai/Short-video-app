@@ -2,6 +2,6 @@
 <selector xmlns:android="http://schemas.android.com/apk/res/android"
     >
 
-    <item android:drawable="@mipmap/nav_main_click" android:state_pressed="true"></item>
-    <item android:drawable="@mipmap/nav_main_normal"></item>
+    <item android:drawable="@drawable/nav_main_click" android:state_pressed="true"></item>
+    <item android:drawable="@drawable/nav_main_normal"></item>
 </selector>
