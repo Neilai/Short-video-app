@@ -23,8 +23,8 @@ public class MeFragment extends Fragment {
     String nameStr;
 
     public View onCreateView(LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
-
         View view = inflater.inflate(R.layout.fragment_me, container, false);
+
         SharedPreferences share = view.getContext().getSharedPreferences("myshare", MODE_PRIVATE);
         idStr = share.getString("id", "");
         nameStr = share.getString("name", "");
@@ -33,14 +33,16 @@ public class MeFragment extends Fragment {
         nameTxt.setText(nameStr);
         idTxt.setText("ID:" + idStr);
 
-        Button btn = view.findViewById(R.id.log_out);
-        btn.setOnClickListener(new View.OnClickListener() {
+        Button btnExit = view.findViewById(R.id.log_out);
+        btnExit.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
+                // 点击注销按钮回退至登陆界面
                 Intent intent = new Intent(view.getContext(), LoginActivity.class);
                 startActivity(intent);
             }
         });
+
         return view;
     }
 }

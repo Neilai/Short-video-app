@@ -41,6 +41,7 @@ public class Viewholder extends RecyclerView.ViewHolder implements View.OnClickL
     @Override
     public void onClick(View v) {
         Log.d("viewHolder", "clicked");
+        // 点击相应卡片跳转至视频播放界面
         Intent intent = new Intent(v.getContext(), VideoActivity.class);
         intent.putExtra("src", videoSrc);
         v.getContext().startActivity(intent);

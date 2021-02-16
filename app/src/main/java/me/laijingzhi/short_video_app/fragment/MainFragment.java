@@ -30,6 +30,7 @@ import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.Spinner;
+import android.widget.Toast;
 import android.widget.VideoView;
 
 import androidx.annotation.NonNull;
@@ -50,8 +51,13 @@ import java.util.ArrayList;
 import java.util.List;
 
 import me.laijingzhi.short_video_app.CameraActivity;
+import me.laijingzhi.short_video_app.MainActivity;
+import me.laijingzhi.short_video_app.MyApplication;
 import me.laijingzhi.short_video_app.R;
-import me.laijingzhi.short_video_app.VideoList.Adapter;
+import me.laijingzhi.short_video_app.UploadActivity;
+import me.laijingzhi.short_video_app.VideoList.VideoAdapter;
+import me.laijingzhi.short_video_app.VideoUploader;
+import me.laijingzhi.short_video_app.api.ApiHelper;
 import me.laijingzhi.short_video_app.api.VideoService;
 import me.laijingzhi.short_video_app.model.PostResponse;
 import me.laijingzhi.short_video_app.model.VideoListResponse;
@@ -68,78 +74,34 @@ import static android.app.Activity.RESULT_OK;
 import static android.content.Context.MODE_PRIVATE;
 
 public class MainFragment extends Fragment {
+    private static final String TAG = "MainFragment";
+
+    private static final int CHOOSE_VIDEO = 1;
+    private static final int RECORD_VIDEO = 2;
+
     String[] permissions = new String[]{Manifest.permission.CAMERA,
             Manifest.permission.RECORD_AUDIO, Manifest.permission.WRITE_EXTERNAL_STORAGE};
     List<String> mPermissionList = new ArrayList<>();
     private final int mRequestCode = 100;
 
-    private final Retrofit retrofit = new Retrofit.Builder()
-            .baseUrl("https://api-sjtu-camp.bytedance.com/")
-            .addConverterFactory(GsonConverterFactory.create())
-            .build();
     private RecyclerView mRecyclerView;
-    private Adapter videoAdapter = new Adapter();
+    private VideoAdapter videoAdapter = new VideoAdapter();
     private SwipeRefreshLayout mSwipeView;
+    private SwipeRefreshLayout.OnRefreshListener refreshListener;
     private Spinner spinner;
+    private AdapterView.OnItemSelectedListener selectListener;
     private AlertDialog alertDialog;
-    boolean showMe = false;
+
+    private VideoService mService;
     String idStr;
     String nameStr;
-
+    boolean showMe = false;
+    Uri chooseVideoUri;
 
     public View onCreateView(LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.fragment_main, container, false);
-        mRecyclerView = view.findViewById(R.id.rv);
-        mSwipeView = view.findViewById(R.id.swipe);
-        GridLayoutManager layoutManager = new GridLayoutManager(this.getContext(), 2);
 
-        mRecyclerView.setLayoutManager(layoutManager);
-
-        mSwipeView.setOnRefreshListener(new SwipeRefreshLayout.OnRefreshListener() {
-            @Override
-            public void onRefresh() {
-                requestAllVideos();
-            }
-        });
-
-        mSwipeView.post(new Runnable() {
-            @Override
-            public void run() {
-                requestAllVideos();
-            }
-        });
-
-
-        SharedPreferences share = view.getContext().getSharedPreferences("myshare", MODE_PRIVATE);
-        idStr = share.getString("id", "");
-        nameStr = share.getString("name", "");
-        view.findViewById(R.id.btn).setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
-                intent.setType("*/*");
-                intent.addCategory(Intent.CATEGORY_OPENABLE);
-                startActivityForResult(intent, 1);
-            }
-        });
-
-        view.findViewById(R.id.btn2).setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-//                Intent intent = new Intent(MediaStore.ACTION_VIDEO_CAPTURE);
-//                startActivityForResult(intent, 2);
-                startActivity(new Intent(getActivity(), CameraActivity.class));
-            }
-        });
-
-
-
-//        if (ContextCompat.checkSelfPermission(view.getContext(), Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
-//            ActivityCompat.requestPermissions(getActivity(), new String[]{
-//                    Manifest.permission.CAMERA}, 0
-//            );
-//        }
-
+        // 在初次显示主页时对所需要的权限进行申请
         mPermissionList.clear();
         for (int i = 0; i < permissions.length; i++) {
             if (ContextCompat.checkSelfPermission(view.getContext(), permissions[i])
@@ -147,162 +109,187 @@ public class MainFragment extends Fragment {
                 mPermissionList.add(permissions[i]);
             }
         }
-        if (mPermissionList.size() > 0) {//有权限没有通过，需要申请
+        // 有权限没有通过，需要申请后回调进行操作
+        if (mPermissionList.size() > 0) {
             ActivityCompat.requestPermissions(getActivity(), permissions, mRequestCode);
         }
 
+        // 获得当前用户的信息供后续使用
+        SharedPreferences share = view.getContext().getSharedPreferences("myshare", MODE_PRIVATE);
+        idStr = share.getString("id", "");
+        nameStr = share.getString("name", "");
+
+        mRecyclerView = view.findViewById(R.id.rv);
+        mSwipeView = view.findViewById(R.id.swipe);
         spinner = view.findViewById(R.id.selector);
+        // 设置选视频和拍视频的按键
+        view.findViewById(R.id.btn).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                // 从文件中读取视频文件
+                Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
+                intent.setType("*/*");
+                intent.addCategory(Intent.CATEGORY_OPENABLE);
+                startActivityForResult(intent, CHOOSE_VIDEO);
+            }
+        });
+
+        view.findViewById(R.id.btn2).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                // 调用系统相机进行视频拍摄，后回调进行预览
+//                Intent intent = new Intent(MediaStore.ACTION_VIDEO_CAPTURE);
+//                startActivityForResult(intent, RECORD_VIDEO);
+                // 跳转进入拍摄视频界面
+                startActivity(new Intent(getActivity(), CameraActivity.class));
+            }
+        });
+
+
+
+        return view;
+    }
+
+    @Override
+    public void onStart() {
+        super.onStart();
+
+        // 设置下拉刷新布局和滚动控件
+        GridLayoutManager layoutManager = new GridLayoutManager(this.getContext(), 2);
+        mRecyclerView.setLayoutManager(layoutManager);
+        // 刷新时重新获取视频列表
+        refreshListener = new SwipeRefreshLayout.OnRefreshListener() {
+            @Override
+            public void onRefresh() {
+                mService = ApiHelper.getInstance().buildRetrofit(ApiHelper.BASE_URL)
+                        .createService(VideoService.class);
+                Call<VideoListResponse> call;
+                if (showMe) {
+                    call = mService.getVideo(idStr);
+                } else {
+                    call = mService.getVideo(null);
+                }
+                call.enqueue(new Callback<VideoListResponse>() {
+                    @Override
+                    public void onResponse(Call<VideoListResponse> call, Response<VideoListResponse> response) {
+                        mRecyclerView.setAdapter(videoAdapter);
+                        videoAdapter.notifyItems(response.body().getFeeds());
+                    }
+
+                    @Override
+                    public void onFailure(Call<VideoListResponse> call, Throwable t) {
+                        t.printStackTrace();
+                    }
+                });
+                mSwipeView.post(new Runnable() {
+                    @Override
+                    public void run() {
+                        mSwipeView.setRefreshing(false);
+                    }
+                });
+            }
+        };
+        mSwipeView.setOnRefreshListener(refreshListener);
+
+        // 设置选择过滤下拉栏
         String[] list = new String[]{"所有", "我的"};
-        ArrayAdapter<String> adapter = new ArrayAdapter<>(view.getContext(), android.R.layout.simple_spinner_item, list);
+        ArrayAdapter<String> adapter = new ArrayAdapter<>(MyApplication.getContext(), android.R.layout.simple_spinner_item, list);
         adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
         spinner.setAdapter(adapter);
-        spinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+        selectListener = new AdapterView.OnItemSelectedListener(){
             @Override
             public void onItemSelected(AdapterView<?> adapterView, View view, int i, long l) {
-                if (i == 0) {
-                    showMe = false;
-                } else {
-                    showMe = true;
+                switch (i){
+                    case 0:
+                        showMe = false;
+                        break;
+                    case 1:
+                        showMe = true;
+                        break;
+                    default:
+                        break;
                 }
                 requestAllVideos();
             }
 
             @Override
             public void onNothingSelected(AdapterView<?> adapterView) {
-
             }
-        });
+        };
+        spinner.setOnItemSelectedListener(selectListener);
 
-        return view;
     }
 
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-        boolean hasPermissionDismiss = false;
+        // 如果有权限没有被允许，不让他继续访问
         if (mRequestCode == requestCode) {
             for (int i = 0; i < grantResults.length; i++) {
-                if (grantResults[i] == -1) {
-                    hasPermissionDismiss = true;
+                if (grantResults[i] == PackageManager.PERMISSION_DENIED) {
+                    Toast.makeText(this.getContext(), "You denied the permission", Toast.LENGTH_SHORT).show();
+                    return;
                 }
             }
-            //如果有权限没有被允许
-            if (hasPermissionDismiss) {
-                return; // 直接关闭页面，不让他继续访问
-            }
         }
     }
 
-    void uploadVideo(Uri uri) {
-        showLoadingDialog();
-        InputStream is = null;
-        ContentResolver contentResolver = this.getContext().getContentResolver();
-        try {
-            is = contentResolver.openInputStream(uri);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        VideoService service = retrofit.create(VideoService.class);
-        Call<PostResponse>
-                call = service.addVideo("", idStr, nameStr, getMultipartFromBitMap("cover_image", "pic.png", createVideoThumbnail(this.getContext(), uri)), getMultipartFromStream("video", "video.mp4", is));
-        call.enqueue(new Callback<PostResponse>() {
-            @Override
-            public void onResponse(final Call<PostResponse> call, final Response<PostResponse> response) {
-                requestAllVideos();
-                dismissLoadingDialog();
-            }
-
-            @Override
-            public void onFailure(final Call<PostResponse> call, final Throwable t) {
-                t.printStackTrace();
-                dismissLoadingDialog();
-            }
-        });
-
-    }
-
+    @Override
     public void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
-        if (requestCode == 1 && resultCode == RESULT_OK) {
-            Uri uri = data.getData();
-            if (uri != null)
-                uploadVideo(uri);
+        switch (requestCode){
+            case CHOOSE_VIDEO:
+                if (resultCode == RESULT_OK) {
+                    // 获得视频文件uri进行上传确认
+                    chooseVideoUri = data.getData();
+                    if (chooseVideoUri != null) {
+                        AlertDialog.Builder dialog = new AlertDialog.Builder(getActivity());
+                        dialog.setTitle("上传确认");
+                        dialog.setMessage("是否开始上传");
+                        dialog.setCancelable(false);
+                        dialog.setPositiveButton("确认", new DialogInterface.OnClickListener() {
+                            @Override
+                            public void onClick(DialogInterface dialogInterface, int i) {
+                                // 跳转至上传界面
+                                Intent intent = new Intent(MyApplication.getContext(), UploadActivity.class);
+                                intent.putExtra("videoUri", chooseVideoUri.toString());
+                                startActivity(intent);
+                            }
+                        });
+                        dialog.setNegativeButton("取消", new DialogInterface.OnClickListener() {
+                            @Override
+                            public void onClick(DialogInterface dialogInterface, int i) {
+                            }
+                        });
+                        dialog.show();
+                    }
+                }
+                break;
+            case RECORD_VIDEO:
+                if(resultCode == RESULT_OK){
+                    //TODO: doSomething
+                }
+                break;
+            default:
+                break;
         }
-    }
-
-    private static byte[] BitmapToBytes(Bitmap bm) {
-        ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        bm.compress(Bitmap.CompressFormat.PNG, 100, baos);
-        return baos.toByteArray();
     }
 
     private void requestAllVideos() {
-        mSwipeView.setRefreshing(true);
-        VideoService service = retrofit.create(VideoService.class);
-        Call<VideoListResponse> call;
-        if (showMe) {
-            call = service.getVideo(idStr);
-        } else {
-            call = service.getVideo(null);
 
-        }
-        call.enqueue(new Callback<VideoListResponse>() {
+        mSwipeView.post(new Runnable() {
             @Override
-            public void onResponse(Call<VideoListResponse> call, Response<VideoListResponse> response) {
-                mRecyclerView.setAdapter(videoAdapter);
-                videoAdapter.notifyItems(response.body().getFeeds());
-            }
-
-            @Override
-            public void onFailure(Call<VideoListResponse> call, Throwable t) {
-                t.printStackTrace();
+            public void run() {
+                mSwipeView.setRefreshing(true);
             }
         });
-        mSwipeView.setRefreshing(false);
+        refreshListener.onRefresh();
+
     }
 
-    private byte[] fileNameToByte(InputStream is) throws IOException {
-        ByteArrayOutputStream os = new ByteArrayOutputStream();
-        byte[] buffer = new byte[0xFFFF];
-        for (int len = is.read(buffer); len != -1; len = is.read(buffer)) {
-            os.write(buffer, 0, len);
-        }
-        return os.toByteArray();
-    }
-
-    private MultipartBody.Part getMultipartFromStream(String key, String name, InputStream is) {
-        RequestBody requestFile = null;
-        try {
-            requestFile = RequestBody.create(MediaType.parse("multipart/form-data"), fileNameToByte(is));
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        return MultipartBody.Part.createFormData(key, name, requestFile);
-    }
-
-    private MultipartBody.Part getMultipartFromBitMap(String key, String name, Bitmap map) {
-        RequestBody requestFile = null;
-        requestFile = RequestBody.create(MediaType.parse("multipart/form-data"), BitmapToBytes(map));
-        return MultipartBody.Part.createFormData(key, name, requestFile);
-    }
-
-    public Bitmap createVideoThumbnail(Context context, Uri uri) {
-        Bitmap bitmap = null;
-        MediaMetadataRetriever retriever = new MediaMetadataRetriever();
-        try {
-            retriever.setDataSource(context, uri);
-            bitmap = retriever.getFrameAtTime(-1);
-        } catch (RuntimeException ex) {
-        } finally {
-            try {
-                retriever.release();
-            } catch (RuntimeException ex) {
-            }
-        }
-        return bitmap;
-    }
-
+    // 设置加载对话框的显示和消失
     public void showLoadingDialog() {
+        Log.d(TAG, "showLoadingDialog");
         alertDialog = new AlertDialog.Builder(getActivity()).create();
         alertDialog.getWindow().setBackgroundDrawable(new ColorDrawable());
         alertDialog.setCancelable(false);
@@ -320,6 +307,7 @@ public class MainFragment extends Fragment {
     }
 
     public void dismissLoadingDialog() {
+        Log.d(TAG, "dismissLoadingDialog");
         if (null != alertDialog && alertDialog.isShowing()) {
             alertDialog.dismiss();
         }

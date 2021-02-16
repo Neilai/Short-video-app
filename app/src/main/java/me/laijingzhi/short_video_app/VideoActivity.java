@@ -20,6 +20,7 @@ public class VideoActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.layout_video);
 
+        // 使用原生VideoView进行视频播放
         videoView = findViewById(R.id.videoView);
         videoView.getHolder().setFormat(PixelFormat.TRANSPARENT);
         videoView.setZOrderOnTop(true);

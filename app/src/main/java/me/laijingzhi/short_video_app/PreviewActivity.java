@@ -42,7 +42,7 @@ import retrofit2.converter.gson.GsonConverterFactory;
 
 
 public class PreviewActivity extends AppCompatActivity {
-    private ImageView buttonCance;
+    private ImageView buttonCancel;
     private ImageView buttonConfrim;
     private VideoView videoView;
     private AlertDialog alertDialog;
@@ -63,30 +63,11 @@ public class PreviewActivity extends AppCompatActivity {
         Intent intent = getIntent();
         videoUri = Uri.parse(intent.getStringExtra("videoUri"));
 
+        // 使用VideoView对拍摄视频进行预览
         videoView = findViewById(R.id.video_look);
-        buttonCance = findViewById(R.id.cancel_button);
-        buttonConfrim = findViewById(R.id.confirm_button);
-
-        buttonCance.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                finish();
-            }
-        });
-        buttonConfrim.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                Intent intent = new Intent(view.getContext(), MainActivity.class);
-                uploadVideo(videoUri);
-//                intent.putExtra("videoUri", videoUri.toString());
-                startActivity(intent);
-            }
-        });
-
         videoView.setVideoURI(videoUri);
         videoView.start();
         videoView.setOnPreparedListener(new MediaPlayer.OnPreparedListener() {
-
             @Override
             public void onPrepared(MediaPlayer mp) {
                 mp.start();
@@ -94,83 +75,105 @@ public class PreviewActivity extends AppCompatActivity {
             }
         });
 
-        SharedPreferences share = getSharedPreferences("myshare", MODE_PRIVATE);
-        idStr = share.getString("id", "");
-        nameStr = share.getString("name", "");
-    }
-
-    void uploadVideo(Uri uri) {
-        showLoadingDialog();
-        InputStream is = null;
-        ContentResolver contentResolver = getContentResolver();
-        try {
-            is = contentResolver.openInputStream(uri);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        VideoService service = retrofit.create(VideoService.class);
-        Call<PostResponse>
-                call = service.addVideo("", idStr, nameStr, getMultipartFromBitMap("cover_image", "pic.png", createVideoThumbnail(this, uri)), getMultipartFromStream("video", "video.mp4", is));
-        call.enqueue(new Callback<PostResponse>() {
+        buttonCancel = findViewById(R.id.cancel_button);
+        buttonConfrim = findViewById(R.id.confirm_button);
+        // 选择取消发布删除预览文件
+        buttonCancel.setOnClickListener(new View.OnClickListener() {
             @Override
-            public void onResponse(final Call<PostResponse> call, final Response<PostResponse> response) {
-//                dismissLoadingDialog();
-            }
-
-            @Override
-            public void onFailure(final Call<PostResponse> call, final Throwable t) {
-                t.printStackTrace();
-//                dismissLoadingDialog();
+            public void onClick(View view) {
+                //TODO: 删除本地文件
+                finish();
             }
         });
-    }
-
-    private static byte[] BitmapToBytes(Bitmap bm) {
-        ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        bm.compress(Bitmap.CompressFormat.PNG, 100, baos);
-        return baos.toByteArray();
-    }
-
-    private byte[] fileNameToByte(InputStream is) throws IOException {
-        ByteArrayOutputStream os = new ByteArrayOutputStream();
-        byte[] buffer = new byte[0xFFFF];
-        for (int len = is.read(buffer); len != -1; len = is.read(buffer)) {
-            os.write(buffer, 0, len);
-        }
-        return os.toByteArray();
-    }
-
-    private MultipartBody.Part getMultipartFromStream(String key, String name, InputStream is) {
-        RequestBody requestFile = null;
-        try {
-            requestFile = RequestBody.create(MediaType.parse("multipart/form-data"), fileNameToByte(is));
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        return MultipartBody.Part.createFormData(key, name, requestFile);
-    }
-
-    private MultipartBody.Part getMultipartFromBitMap(String key, String name, Bitmap map) {
-        RequestBody requestFile = null;
-        requestFile = RequestBody.create(MediaType.parse("multipart/form-data"), BitmapToBytes(map));
-        return MultipartBody.Part.createFormData(key, name, requestFile);
-    }
-
-    public Bitmap createVideoThumbnail(Context context, Uri uri) {
-        Bitmap bitmap = null;
-        MediaMetadataRetriever retriever = new MediaMetadataRetriever();
-        try {
-            retriever.setDataSource(context, uri);
-            bitmap = retriever.getFrameAtTime(-1);
-        } catch (RuntimeException ex) {
-        } finally {
-            try {
-                retriever.release();
-            } catch (RuntimeException ex) {
+        // 选择发布视频后跳转回上传页
+        buttonConfrim.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                Intent intent = new Intent(view.getContext(), UploadActivity.class);
+                intent.putExtra("videoUri", videoUri.toString());
+                startActivity(intent);
             }
-        }
-        return bitmap;
+        });
+
+//        SharedPreferences share = getSharedPreferences("myshare", MODE_PRIVATE);
+//        idStr = share.getString("id", "");
+//        nameStr = share.getString("name", "");
     }
+
+
+
+//    void uploadVideo(Uri uri) {
+//        showLoadingDialog();
+//        InputStream is = null;
+//        ContentResolver contentResolver = getContentResolver();
+//        try {
+//            is = contentResolver.openInputStream(uri);
+//        } catch (IOException e) {
+//            e.printStackTrace();
+//        }
+//        VideoService service = retrofit.create(VideoService.class);
+//        Call<PostResponse>
+//                call = service.addVideo("", idStr, nameStr, getMultipartFromBitMap("cover_image", "pic.png", createVideoThumbnail(this, uri)), getMultipartFromStream("video", "video.mp4", is));
+//        call.enqueue(new Callback<PostResponse>() {
+//            @Override
+//            public void onResponse(final Call<PostResponse> call, final Response<PostResponse> response) {
+////                dismissLoadingDialog();
+//            }
+//
+//            @Override
+//            public void onFailure(final Call<PostResponse> call, final Throwable t) {
+//                t.printStackTrace();
+////                dismissLoadingDialog();
+//            }
+//        });
+//    }
+//
+//    private static byte[] BitmapToBytes(Bitmap bm) {
+//        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+//        bm.compress(Bitmap.CompressFormat.PNG, 100, baos);
+//        return baos.toByteArray();
+//    }
+//
+//    private byte[] fileNameToByte(InputStream is) throws IOException {
+//        ByteArrayOutputStream os = new ByteArrayOutputStream();
+//        byte[] buffer = new byte[0xFFFF];
+//        for (int len = is.read(buffer); len != -1; len = is.read(buffer)) {
+//            os.write(buffer, 0, len);
+//        }
+//        return os.toByteArray();
+//    }
+//
+//    private MultipartBody.Part getMultipartFromStream(String key, String name, InputStream is) {
+//        RequestBody requestFile = null;
+//        try {
+//            requestFile = RequestBody.create(MediaType.parse("multipart/form-data"), fileNameToByte(is));
+//        } catch (IOException e) {
+//            e.printStackTrace();
+//        }
+//        return MultipartBody.Part.createFormData(key, name, requestFile);
+//    }
+//
+//    private MultipartBody.Part getMultipartFromBitMap(String key, String name, Bitmap map) {
+//        RequestBody requestFile = null;
+//        requestFile = RequestBody.create(MediaType.parse("multipart/form-data"), BitmapToBytes(map));
+//        return MultipartBody.Part.createFormData(key, name, requestFile);
+//    }
+//
+//    public Bitmap createVideoThumbnail(Context context, Uri uri) {
+//        Bitmap bitmap = null;
+//        MediaMetadataRetriever retriever = new MediaMetadataRetriever();
+//        try {
+//            retriever.setDataSource(context, uri);
+//            bitmap = retriever.getFrameAtTime(-1);
+//        } catch (RuntimeException ex) {
+//        } finally {
+//            try {
+//                retriever.release();
+//            } catch (RuntimeException ex) {
+//            }
+//        }
+//        return bitmap;
+//    }
 //
     public void showLoadingDialog() {
         alertDialog = new AlertDialog.Builder(this).create();
@@ -194,10 +197,10 @@ public class PreviewActivity extends AppCompatActivity {
             alertDialog.dismiss();
         }
     }
-
-    @Override
-    protected void onDestroy() {
-        super.onDestroy();
-        dismissLoadingDialog();
-    }
+//
+//    @Override
+//    protected void onDestroy() {
+//        super.onDestroy();
+//        dismissLoadingDialog();
+//    }
 }

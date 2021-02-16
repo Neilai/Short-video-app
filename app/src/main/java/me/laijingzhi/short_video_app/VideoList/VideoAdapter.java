@@ -12,7 +12,7 @@ import me.laijingzhi.short_video_app.R;
 import me.laijingzhi.short_video_app.model.Video;
 
 
-public class Adapter extends RecyclerView.Adapter<Viewholder> {
+public class VideoAdapter extends RecyclerView.Adapter<Viewholder> {
 
     private List<Video> mItems;
 
@@ -34,9 +34,7 @@ public class Adapter extends RecyclerView.Adapter<Viewholder> {
     }
 
     public void notifyItems(@NonNull List<Video> items) {
-//        mItems.clear();
-//        mItems.addAll(items);
-        mItems=items;
+        mItems = items;
         notifyDataSetChanged();
     }
 }

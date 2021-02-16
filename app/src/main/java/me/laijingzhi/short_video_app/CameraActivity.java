@@ -36,10 +36,6 @@ import java.util.Date;
 import java.util.List;
 
 public class CameraActivity extends AppCompatActivity implements BothWayProgressBar.OnProgressEndListener {
-    String[] permissions = new String[]{Manifest.permission.CAMERA,
-            Manifest.permission.RECORD_AUDIO, Manifest.permission.WRITE_EXTERNAL_STORAGE};
-    List<String> mPermissionList = new ArrayList<>();
-    private final int mRequestCode = 100;
 
     private Camera mCamera;
     private SurfaceView mSurfaceView;
@@ -56,9 +52,6 @@ public class CameraActivity extends AppCompatActivity implements BothWayProgress
     private boolean isRunning;
     private int mTime;
 
-    //屏幕分辨率
-    private int videoWidth = 720, videoHeight = 1280;
-
     private ImageView btn_flash;
     private ImageView btn_turn;
     private ImageView btn_control;
@@ -74,20 +67,17 @@ public class CameraActivity extends AppCompatActivity implements BothWayProgress
         super.onCreate(savedInstanceState);
         setContentView(R.layout.layout_camera);
 
-        checkPermissionAndStartRecord();
-    }
-
-    private void checkPermissionAndStartRecord() {
+        // 设置摄像头，初始打开后摄
         getCameraInfo();
-
         try {
-            mCamera = Camera.open(Camera.CameraInfo.CAMERA_FACING_BACK);
+            mCamera = Camera.open(iBackCameraIndex);
             flag_back = true;
             setCamera();
         } catch (Exception e) {
-
+            e.printStackTrace();
         }
 
+        // 设置画幅
         mSurfaceView = findViewById(R.id.surfaceView);
         mSurfaceHolder = mSurfaceView.getHolder();
         mSurfaceHolder.addCallback(new SurfaceHolder.Callback() {
@@ -97,12 +87,13 @@ public class CameraActivity extends AppCompatActivity implements BothWayProgress
                     mCamera.setPreviewDisplay(holder);
                     mCamera.startPreview();
                 } catch (IOException e) {
-
+                    e.printStackTrace();
                 }
             }
 
             @Override
             public void surfaceChanged(SurfaceHolder holder, int format, int width, int height) {
+//                Toast.makeText(CameraActivity.this, "surfaceChanged执行了", Toast.LENGTH_SHORT).show();
             }
 
             @Override
@@ -110,12 +101,12 @@ public class CameraActivity extends AppCompatActivity implements BothWayProgress
             }
         });
 
-
-        mProgressBar = (BothWayProgressBar) findViewById(R.
-                id.main_progress_bar);
+        // 设置计时进度条
+        mProgressBar = (BothWayProgressBar) findViewById(R.id.main_progress_bar);
         mProgressBar.setOnProgressEndListener(this);
         mHandler = new MyHandler(this);
 
+        // 监听镜头转换按钮
         btn_turn = findViewById(R.id.camera_turn);
         btn_turn.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -124,42 +115,38 @@ public class CameraActivity extends AppCompatActivity implements BothWayProgress
                     mCamera.release();
                     mCamera = null;
                 }
+
                 if (flag_back) {
                     flag_back = false;
                     mCamera = Camera.open(iFrontCameraIndex);
-                    setCamera();
-                    try {
-                        mCamera.setPreviewDisplay(mSurfaceView.getHolder());
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                    }
-                    mCamera.startPreview();
                 } else {
                     flag_back = true;
                     mCamera = Camera.open(iBackCameraIndex);
-                    setCamera();
-                    try {
-                        mCamera.setPreviewDisplay(mSurfaceView.getHolder());
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                    }
-                    mCamera.startPreview();
                 }
+
+                setCamera();
+                try {
+                    mCamera.setPreviewDisplay(mSurfaceView.getHolder());
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+                mCamera.startPreview();
             }
         });
 
+        // 监听拍摄按钮
         btn_control = findViewById(R.id.camera_control);
         btn_control.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 if (flag_control == 0) {    // 手动开始录制
-                    Log.d("TAG", "start");
+                    Log.d("TAG", "start recording");
                     btn_control.setBackgroundResource(R.drawable.btn_camera_recording);
                     flag_control = 1;
                     mProgressBar.setVisibility(View.VISIBLE);
-
                     startMediaRecorder();
 
+                    // 异步重画进度条
                     mProgressThread = new Thread() {
                         @Override
                         public void run() {
@@ -178,14 +165,14 @@ public class CameraActivity extends AppCompatActivity implements BothWayProgress
                         }
                     };
                     mProgressThread.start();
+
                 } else {    // 手动结束录制
-                    Log.d("TAG", "stop");
+                    Log.d("TAG", "stop recording");
                     btn_control.setBackgroundResource(R.drawable.btn_camera_taking);
                     flag_control = 0;
                     mProgressBar.setVisibility(View.INVISIBLE);
 
-                    //判断是否为成功录制(时间过短)
-                    // TODO: 时间过短判断只会进行一次
+                    // 判断是否为成功录制(时间过短删除文件)
                     if (mProgress < 50) {
                         Toast.makeText(CameraActivity.this, "录制时长过短", Toast.LENGTH_SHORT).show();
                         if (mTargetFile.exists()) {
@@ -206,7 +193,7 @@ public class CameraActivity extends AppCompatActivity implements BothWayProgress
         List<Camera.Size> listSize = parameters.getSupportedPictureSizes();
         parameters.setPictureSize(listSize.get(0).width, listSize.get(0).height);
         mCamera.setDisplayOrientation(90);
-        //设置不断聚焦
+        //设置持续聚焦
 //        if (flag_back) {
 //            parameters.setFocusMode(Camera.Parameters.FOCUS_MODE_CONTINUOUS_VIDEO);
 //        }
@@ -233,7 +220,7 @@ public class CameraActivity extends AppCompatActivity implements BothWayProgress
         mMediaRecorder.setOrientationHint(90);//78后置摄像头选择90度，前置摄像头旋转270度
 
         // Step 2: Set sources
-        mMediaRecorder.setAudioSource(MediaRecorder.AudioSource.DEFAULT);//VOICE_RECOGNITION
+        mMediaRecorder.setAudioSource(MediaRecorder.AudioSource.DEFAULT);
         mMediaRecorder.setVideoSource(MediaRecorder.VideoSource.CAMERA);
 
         // Step 3: Set a Camera Parameters
@@ -271,6 +258,7 @@ public class CameraActivity extends AppCompatActivity implements BothWayProgress
         if (mMediaRecorder != null) {
             if (mIsRecording) {
                 try {
+                    // 防止拍摄时长过短导致程序崩溃
                     mMediaRecorder.setOnErrorListener(null);
                     mMediaRecorder.setOnInfoListener(null);
                     mMediaRecorder.setPreviewDisplay(null);
@@ -279,17 +267,15 @@ public class CameraActivity extends AppCompatActivity implements BothWayProgress
                     e.printStackTrace();
                 }
 
-                isRunning = false;
-
-                //mCamera.lock();
                 mMediaRecorder.reset();
                 mMediaRecorder.release();
                 mMediaRecorder = null;
                 mIsRecording = false;
+                isRunning = false;
                 try {
                     mCamera.reconnect();
                 } catch (Exception e) {
-                    Log.e("TAG", "reconect fail" + e.toString());
+                    e.printStackTrace();
                 }
             }
         }
@@ -344,7 +330,6 @@ public class CameraActivity extends AppCompatActivity implements BothWayProgress
                     mActivity.mProgressBar.setProgress(mActivity.mProgress);
                     break;
             }
-
         }
     }
 
@@ -360,6 +345,7 @@ public class CameraActivity extends AppCompatActivity implements BothWayProgress
 
         for (int i = 0; i < iCameraCnt; i++) {
             Camera.getCameraInfo(i, cameraInfo);
+            // 记录前置和后置摄像头的序号
             if (cameraInfo.facing == Camera.CameraInfo.CAMERA_FACING_FRONT) {
                 iFrontCameraIndex = i;
             } else if (cameraInfo.facing == Camera.CameraInfo.CAMERA_FACING_BACK) {

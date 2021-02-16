@@ -9,13 +9,8 @@ import android.view.View;
 
 public class BothWayProgressBar extends View {
     private static final String TAG = "BothWayProgressBar";
-    //取消状态为红色bar, 反之为绿色bar
-    private boolean isCancel = false;
-    private Context mContext;
     //正在录制的画笔
     private Paint mRecordPaint;
-    //上滑取消时的画笔
-    private Paint mCancelPaint;
     //是否显示
     private int mVisibility;
     // 当前进度
@@ -26,17 +21,16 @@ public class BothWayProgressBar extends View {
     public BothWayProgressBar(Context context) {
         super(context, null);
     }
+
     public BothWayProgressBar(Context context, AttributeSet attrs) {
         super(context, attrs);
-        mContext = context;
         init();
     }
+
     private void init() {
         mVisibility = INVISIBLE;
         mRecordPaint = new Paint();
         mRecordPaint.setColor(Color.GREEN);
-        mCancelPaint = new Paint();
-        mCancelPaint.setColor(Color.RED);
     }
 
     @Override
@@ -47,22 +41,20 @@ public class BothWayProgressBar extends View {
             int width = getWidth();
             int mid = width / 2;
 
-
             //画出进度条
             if (progress < mid){
-                canvas.drawRect(progress, 0, width-progress, height, isCancel ? mCancelPaint : mRecordPaint);
-            } else {
+                canvas.drawRect(progress, 0, width - progress, height, mRecordPaint);
+            }
+            else {
                 if (mOnProgressEndListener != null) {
                     mOnProgressEndListener.onProgressEndListener();
                 }
             }
-        } else {
+        }
+        else {
             canvas.drawColor(Color.argb(0, 0, 0, 0));
         }
     }
-
-
-
 
     /**
      * 设置进度
@@ -73,14 +65,6 @@ public class BothWayProgressBar extends View {
         invalidate();
     }
 
-    /**
-     * 设置录制状态 是否为取消状态
-     * @param isCancel
-     */
-    public void setCancel(boolean isCancel) {
-        this.isCancel = isCancel;
-        invalidate();
-    }
     /**
      * 重写是否可见方法
      * @param visibility

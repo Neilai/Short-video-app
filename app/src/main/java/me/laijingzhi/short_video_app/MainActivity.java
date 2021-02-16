@@ -11,6 +11,7 @@ import me.laijingzhi.short_video_app.fragment.MainFragment;
 import me.laijingzhi.short_video_app.fragment.MeFragment;
 
 public class MainActivity extends AppCompatActivity implements View.OnClickListener {
+    // 主页建立两个Fragment(首页/我的)，设置点击监听切换Fragment的显示和隐藏
 
     protected MainFragment mMainFragment = new MainFragment();
     protected MeFragment mMeFragment = new MeFragment();
@@ -23,6 +24,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
         initView();
         this.getSupportFragmentManager()
                 .beginTransaction()
@@ -39,10 +41,11 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         mMenuMain.setOnClickListener(this);
         mMenuMe.setOnClickListener(this);
 
-        MainIcon=mMenuMain.findViewById(R.id.img_main);
-        MeIcon=mMenuMe.findViewById(R.id.img_me);
-        MeIcon.setImageResource(R.drawable.nav_me_normal);
+        MainIcon = mMenuMain.findViewById(R.id.img_main);
         MainIcon.setImageResource(R.drawable.nav_main_click);
+        MeIcon = mMenuMe.findViewById(R.id.img_me);
+        MeIcon.setImageResource(R.drawable.nav_me_normal);
+
     }
 
     @Override
