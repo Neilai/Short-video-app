@@ -25,7 +25,7 @@
         android:background="#00ffffff"
         android:layout_alignParentBottom="true">
 
-        <me.laijingzhi.short_video_app.BothWayProgressBar
+        <me.laijingzhi.short_video_app.util.BothWayProgressBar
             android:id="@+id/main_progress_bar"
             android:layout_width="match_parent"
             android:layout_height="2dp"

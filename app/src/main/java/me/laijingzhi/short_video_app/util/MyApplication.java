@@ -1,4 +1,4 @@
-package me.laijingzhi.short_video_app;
+package me.laijingzhi.short_video_app.util;
 
 import android.app.Application;
 import android.content.Context;

@@ -6,6 +6,8 @@ import android.view.ViewGroup;
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 
+import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 
 import me.laijingzhi.short_video_app.R;
@@ -35,6 +37,7 @@ public class VideoAdapter extends RecyclerView.Adapter<Viewholder> {
 
     public void notifyItems(@NonNull List<Video> items) {
         mItems = items;
+        Collections.reverse(mItems);
         notifyDataSetChanged();
     }
 }

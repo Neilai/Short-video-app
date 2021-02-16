@@ -25,6 +25,8 @@ import java.io.InputStream;
 import me.laijingzhi.short_video_app.api.ApiHelper;
 import me.laijingzhi.short_video_app.api.VideoService;
 import me.laijingzhi.short_video_app.model.PostResponse;
+import me.laijingzhi.short_video_app.util.MyApplication;
+import me.laijingzhi.short_video_app.util.ProgressRequestBody;
 import okhttp3.MediaType;
 import okhttp3.MultipartBody;
 import okhttp3.RequestBody;
