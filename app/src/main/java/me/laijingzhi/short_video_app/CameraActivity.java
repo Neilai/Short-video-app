@@ -1,6 +1,7 @@
 package me.laijingzhi.short_video_app;
 
 import android.content.Intent;
+import android.graphics.PixelFormat;
 import android.hardware.Camera;
 import android.media.CamcorderProfile;
 import android.media.MediaRecorder;
@@ -10,6 +11,7 @@ import android.os.Environment;
 import android.os.Handler;
 import android.os.Message;
 import android.util.Log;
+import android.view.Surface;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 import android.view.View;
@@ -33,6 +35,9 @@ public class CameraActivity extends AppCompatActivity implements BothWayProgress
     private Camera mCamera;
     private SurfaceView mSurfaceView;
     private SurfaceHolder mSurfaceHolder;
+    private int mPreviewSurfaceWidth;
+    private int mPreviewSurfaceHeight;
+
     private MediaRecorder mMediaRecorder;
     private boolean mIsRecording = false;
     private File mTargetFile;
@@ -43,56 +48,23 @@ public class CameraActivity extends AppCompatActivity implements BothWayProgress
     private MyHandler mHandler;
     private Thread mProgressThread;
     private boolean isRunning;
-    private int mTime;
 
     private ImageView btn_flash;
     private ImageView btn_turn;
     private ImageView btn_control;
     private int flag_control = 0;
 
-    private int iCameraCnt;
-    private int iFrontCameraIndex;
-    private int iBackCameraIndex;
+    private int mCameraCnt;
+    private Camera.CameraInfo mFrontCameraInfo = null;
+    private int mFrontCameraIndex = -1;
+    private Camera.CameraInfo mBackCameraInfo = null;
+    private int mBackCameraIndex = -1;
     private boolean flag_back;
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.layout_camera);
-
-        // 设置摄像头，初始打开后摄
-        getCameraInfo();
-        try {
-            mCamera = Camera.open(iBackCameraIndex);
-            flag_back = true;
-            setCamera();
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-
-        // 设置画幅
-        mSurfaceView = findViewById(R.id.surfaceView);
-        mSurfaceHolder = mSurfaceView.getHolder();
-        mSurfaceHolder.addCallback(new SurfaceHolder.Callback() {
-            @Override
-            public void surfaceCreated(SurfaceHolder holder) {
-                try {
-                    mCamera.setPreviewDisplay(holder);
-                    mCamera.startPreview();
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-            }
-
-            @Override
-            public void surfaceChanged(SurfaceHolder holder, int format, int width, int height) {
-//                Toast.makeText(CameraActivity.this, "surfaceChanged执行了", Toast.LENGTH_SHORT).show();
-            }
-
-            @Override
-            public void surfaceDestroyed(SurfaceHolder holder) {
-            }
-        });
 
         // 设置计时进度条
         mProgressBar = (BothWayProgressBar) findViewById(R.id.main_progress_bar);
@@ -105,16 +77,19 @@ public class CameraActivity extends AppCompatActivity implements BothWayProgress
             @Override
             public void onClick(View v) {
                 if (mCamera != null) {
+                    mCamera.stopPreview();
                     mCamera.release();
                     mCamera = null;
                 }
 
                 if (flag_back) {
                     flag_back = false;
-                    mCamera = Camera.open(iFrontCameraIndex);
+                    mCamera = Camera.open(mFrontCameraIndex);
+                    mCamera.setDisplayOrientation(getCameraDisplayOrientation(mFrontCameraInfo));
                 } else {
                     flag_back = true;
-                    mCamera = Camera.open(iBackCameraIndex);
+                    mCamera = Camera.open(mBackCameraIndex);
+                    mCamera.setDisplayOrientation(getCameraDisplayOrientation(mBackCameraInfo));
                 }
 
                 setCamera();
@@ -150,7 +125,7 @@ public class CameraActivity extends AppCompatActivity implements BothWayProgress
                                 while (isRunning) {
                                     mProgress++;
                                     mHandler.obtainMessage(0).sendToTarget();
-                                    Thread.sleep(20);
+                                    Thread.sleep(40000 / mPreviewSurfaceWidth);
                                 }
                             } catch (InterruptedException e) {
                                 e.printStackTrace();
@@ -181,24 +156,88 @@ public class CameraActivity extends AppCompatActivity implements BothWayProgress
         });
     }
 
-    private void setCamera() {
-        Camera.Parameters parameters = mCamera.getParameters();
-        List<Camera.Size> listSize = parameters.getSupportedPictureSizes();
-        parameters.setPictureSize(listSize.get(0).width, listSize.get(0).height);
-        mCamera.setDisplayOrientation(90);
-        //设置持续聚焦
-//        if (flag_back) {
-//            parameters.setFocusMode(Camera.Parameters.FOCUS_MODE_CONTINUOUS_VIDEO);
-//        }
-        mCamera.setParameters(parameters);
+    @Override
+    protected void onStart() {
+        super.onStart();
+        // 设置摄像头，初始打开后摄
+        getCameraInfo();
+        try {
+            mCamera = Camera.open(mBackCameraIndex);
+            flag_back = true;
+            mCamera.setDisplayOrientation(getCameraDisplayOrientation(mBackCameraInfo));
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        // 设置画幅
+        mSurfaceView = findViewById(R.id.surfaceView);
+        mSurfaceHolder = mSurfaceView.getHolder();
+        mSurfaceHolder.addCallback(new SurfaceHolder.Callback() {
+            @Override
+            public void surfaceCreated(SurfaceHolder holder) {
+            }
+
+            @Override
+            public void surfaceChanged(SurfaceHolder holder, int format, int width, int height) {
+                mSurfaceHolder = holder;
+                mPreviewSurfaceWidth = width;
+                mPreviewSurfaceHeight = height;
+
+                setCamera();
+                try {
+                    mCamera.setPreviewDisplay(holder);
+                    mCamera.startPreview();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+
+            @Override
+            public void surfaceDestroyed(SurfaceHolder holder) {
+                mSurfaceHolder = null;
+                mPreviewSurfaceWidth = 0;
+                mPreviewSurfaceHeight = 0;
+            }
+        });
     }
 
-    protected void releaseCamera() {
+    @Override
+    protected void onStop() {
+        super.onStop();
         if (mCamera != null) {
             mCamera.stopPreview();
             mCamera.release();
             mCamera = null;
         }
+    }
+
+    // 设置摄像头参数
+    private void setCamera() {
+        int longSide = mPreviewSurfaceHeight;
+        int shortSide = mPreviewSurfaceWidth;
+        float aspectRatio = (float) longSide / shortSide;
+        Camera.Parameters parameters = mCamera.getParameters();
+        // 设置预览尺寸
+        List<Camera.Size> supportedPreviewSizes = parameters.getSupportedPreviewSizes();
+        for (Camera.Size previewSize : supportedPreviewSizes) {
+            if ((float) previewSize.width / previewSize.height == aspectRatio && previewSize.height <= shortSide && previewSize.width <= longSide) {
+                parameters.setPreviewSize(previewSize.width, previewSize.height);
+                break;
+            }
+        }
+        // 设置照片尺寸
+        List<Camera.Size> supportedPictureSizes = parameters.getSupportedPictureSizes();
+        for (Camera.Size pictureSize : supportedPictureSizes) {
+            if ((float) pictureSize.width / pictureSize.height == aspectRatio) {
+                parameters.setPictureSize(pictureSize.width, pictureSize.height);
+                break;
+            }
+        }
+        //设置持续聚焦
+        if (flag_back) {
+            parameters.setFocusMode(Camera.Parameters.FOCUS_MODE_CONTINUOUS_VIDEO);
+        }
+        mCamera.setParameters(parameters);
     }
 
     private void startMediaRecorder() {
@@ -281,8 +320,6 @@ public class CameraActivity extends AppCompatActivity implements BothWayProgress
         startActivity(intent);
     }
 
-    // TODO：超时过一次后再次拍摄就会崩掉
-    // 崩掉就崩掉吧，反正录制完就跳转了
     @Override
     public void onProgressEndListener() {
         //视频停止录制
@@ -326,23 +363,48 @@ public class CameraActivity extends AppCompatActivity implements BothWayProgress
         }
     }
 
-    @Override
-    protected void onDestroy() {
-        super.onDestroy();
-        releaseCamera();
+    // 矫正预览画面方向
+    private int getCameraDisplayOrientation(Camera.CameraInfo cameraInfo) {
+        int rotation = getWindowManager().getDefaultDisplay().getRotation();
+        int degrees = 0;
+        switch (rotation) {
+            case Surface.ROTATION_0:
+                degrees = 0;
+                break;
+            case Surface.ROTATION_90:
+                degrees = 90;
+                break;
+            case Surface.ROTATION_180:
+                degrees = 180;
+                break;
+            case Surface.ROTATION_270:
+                degrees = 270;
+                break;
+        }
+        int result;
+        if (cameraInfo.facing == Camera.CameraInfo.CAMERA_FACING_FRONT) {
+            result = (cameraInfo.orientation + degrees) % 360;
+            result = (360 - result) % 360;  // compensate the mirror
+        } else {  // back-facing
+            result = (cameraInfo.orientation - degrees + 360) % 360;
+        }
+        return result;
     }
 
+    // 获取设备摄像头信息
     protected void getCameraInfo() {
         Camera.CameraInfo cameraInfo = new Camera.CameraInfo();
-        iCameraCnt = Camera.getNumberOfCameras();
+        mCameraCnt = Camera.getNumberOfCameras();
 
-        for (int i = 0; i < iCameraCnt; i++) {
+        for (int i = 0; i < mCameraCnt; i++) {
             Camera.getCameraInfo(i, cameraInfo);
             // 记录前置和后置摄像头的序号
             if (cameraInfo.facing == Camera.CameraInfo.CAMERA_FACING_FRONT) {
-                iFrontCameraIndex = i;
+                mFrontCameraIndex = i;
+                mFrontCameraInfo = cameraInfo;
             } else if (cameraInfo.facing == Camera.CameraInfo.CAMERA_FACING_BACK) {
-                iBackCameraIndex = i;
+                mBackCameraIndex = i;
+                mBackCameraInfo = cameraInfo;
             }
         }
     }

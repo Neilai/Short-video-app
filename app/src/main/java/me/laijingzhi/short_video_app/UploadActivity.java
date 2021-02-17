@@ -25,6 +25,7 @@ import java.io.InputStream;
 import me.laijingzhi.short_video_app.api.ApiHelper;
 import me.laijingzhi.short_video_app.api.VideoService;
 import me.laijingzhi.short_video_app.model.PostResponse;
+import me.laijingzhi.short_video_app.util.FileUriPathUtils;
 import me.laijingzhi.short_video_app.util.MyApplication;
 import me.laijingzhi.short_video_app.util.ProgressRequestBody;
 import okhttp3.MediaType;
@@ -41,7 +42,6 @@ public class UploadActivity extends AppCompatActivity {
 
     String idStr;
     String nameStr;
-    boolean isSuccess = true;
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -73,7 +73,7 @@ public class UploadActivity extends AppCompatActivity {
                 .createService(VideoService.class);
 
         Context mContext = MyApplication.getContext();
-        File file = uriToFileApiQ(uri, mContext);
+        File file = new File(new FileUriPathUtils().getRealFilePath(MyApplication.getContext(), uri));
         //实现上传进度监听
         ProgressRequestBody requestFile = new ProgressRequestBody(file, "video/*", new ProgressRequestBody.UploadCallbacks() {
             @Override
@@ -101,7 +101,7 @@ public class UploadActivity extends AppCompatActivity {
             public void onResponse(Call<PostResponse> call, Response<PostResponse> response) {
                 PostResponse resp = response.body();
                 if (resp != null) {
-                    Log.d("TAG", "图片上传成功");
+                    Log.d("TAG", "视频上传成功");
                     jumpToMain();
                 }
             }
@@ -111,33 +111,6 @@ public class UploadActivity extends AppCompatActivity {
                 Log.d("TAG", "图片上传失败");
             }
         });
-    }
-
-    public static File uriToFileApiQ(Uri uri, Context context) {
-        File file = null;
-        if(uri == null) return file;
-        //android10以上转换
-        if (uri.getScheme().equals(ContentResolver.SCHEME_FILE)) {
-            file = new File(uri.getPath());
-        } else if (uri.getScheme().equals(ContentResolver.SCHEME_CONTENT)) {
-            //把文件复制到沙盒目录
-            ContentResolver contentResolver = context.getContentResolver();
-            String displayName = System.currentTimeMillis()+ Math.round((Math.random() + 1) * 1000)
-                    +"."+ MimeTypeMap.getSingleton().getExtensionFromMimeType(contentResolver.getType(uri));
-
-            try {
-                InputStream is = contentResolver.openInputStream(uri);
-                File cache = new File(context.getExternalCacheDir().getAbsolutePath(), displayName);
-                FileOutputStream fos = new FileOutputStream(cache);
-                FileUtils.copy(is, fos);
-                file = cache;
-                fos.close();
-                is.close();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        }
-        return file;
     }
 
     // 将位图和输入流转换成字节数组，再生成复合部分
