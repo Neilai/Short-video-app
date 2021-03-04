@@ -27,42 +27,45 @@
             android:layout_alignBottom="@+id/surfaceView">
 
             // 切换闪光灯
-            <ImageView
-                android:id="@+id/camera_light"
+            <RelativeLayout
                 android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:padding="7dp"
-                android:layout_marginLeft="10dp"
-                android:layout_gravity="center_vertical"
-                android:src="@drawable/btn_camera_lighting_off" />
+                android:layout_height="match_parent"
+                android:layout_weight="1">
+                <ImageView
+                    android:id="@+id/camera_light"
+                    android:layout_width="40dp"
+                    android:layout_height="40dp"
+                    android:layout_centerInParent="true"
+                    android:src="@drawable/btn_camera_lighting_off" />
+            </RelativeLayout>
 
+            // 拍照
             <RelativeLayout
                 android:id="@+id/homecamera_bottom_relative"
                 android:layout_width="0dp"
                 android:layout_height="match_parent"
-                android:layout_weight="5">
-
-                // 拍照
+                android:layout_weight="3">
                 <ImageView
                     android:id="@+id/camera_control"
                     android:layout_width="65dp"
                     android:layout_height="65dp"
                     android:layout_centerInParent="true"
                     android:background="@drawable/btn_camera_taking" />
-
             </RelativeLayout>
 
             // 切换前/后镜头
-            <ImageView
-                android:id="@+id/camera_turn"
+            <RelativeLayout
                 android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:padding="7dp"
-                android:layout_marginRight="10dp"
-                android:layout_gravity="center_vertical"
-                android:src="@drawable/btn_camera_turning" />
+                android:layout_height="match_parent"
+                android:layout_weight="1">
+                <ImageView
+                    android:id="@+id/camera_turn"
+                    android:layout_width="40dp"
+                    android:layout_height="40dp"
+                    android:layout_centerInParent="true"
+                    android:src="@drawable/btn_camera_turning" />
+            </RelativeLayout>
+
 
         </LinearLayout>
 

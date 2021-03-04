@@ -53,13 +53,14 @@ public class CameraActivity extends AppCompatActivity implements BothWayProgress
     private ImageView btn_turn;
     private ImageView btn_control;
     private int flag_control = 0;
+    private boolean flag_back = false;
+    private boolean flag_lighton = false;
 
     private int mCameraCnt;
     private Camera.CameraInfo mFrontCameraInfo = null;
     private int mFrontCameraIndex = -1;
     private Camera.CameraInfo mBackCameraInfo = null;
     private int mBackCameraIndex = -1;
-    private boolean flag_back;
     private int mOrientation;
 
     @Override
@@ -71,6 +72,30 @@ public class CameraActivity extends AppCompatActivity implements BothWayProgress
         mProgressBar = (BothWayProgressBar) findViewById(R.id.main_progress_bar);
         mProgressBar.setOnProgressEndListener(this);
         mHandler = new MyHandler(this);
+
+        // 监听闪光灯切换按钮
+        btn_flash = findViewById(R.id.camera_light);
+        btn_flash.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                Camera.Parameters parameters = mCamera.getParameters();
+                if(flag_lighton){
+                    btn_flash.setImageResource(R.drawable.btn_camera_lighting_off);
+                    flag_lighton = false;
+                    parameters.setFlashMode(Camera.Parameters.FLASH_MODE_OFF);
+                }
+                else{
+                    btn_flash.setImageResource(R.drawable.btn_camera_lighting_on);
+                    flag_lighton = true;
+                    parameters.setFlashMode(Camera.Parameters.FLASH_MODE_TORCH);
+                }
+                try {
+                    mCamera.setParameters(parameters);
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
+        });
 
         // 监听镜头转换按钮
         btn_turn = findViewById(R.id.camera_turn);
@@ -110,7 +135,7 @@ public class CameraActivity extends AppCompatActivity implements BothWayProgress
             public void onClick(View v) {
                 if (flag_control == 0) {    // 手动开始录制
                     Log.d("TAG", "start recording");
-                    btn_control.setBackgroundResource(R.drawable.btn_camera_recording);
+                    btn_control.setImageResource(R.drawable.btn_camera_recording);
                     flag_control = 1;
                     mProgressBar.setVisibility(View.VISIBLE);
                     startMediaRecorder();
@@ -137,7 +162,7 @@ public class CameraActivity extends AppCompatActivity implements BothWayProgress
 
                 } else {    // 手动结束录制
                     Log.d("TAG", "stop recording");
-                    btn_control.setBackgroundResource(R.drawable.btn_camera_taking);
+                    btn_control.setImageResource(R.drawable.btn_camera_taking);
                     flag_control = 0;
                     mProgressBar.setVisibility(View.INVISIBLE);
 
