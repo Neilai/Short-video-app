@@ -60,6 +60,7 @@ public class CameraActivity extends AppCompatActivity implements BothWayProgress
     private Camera.CameraInfo mBackCameraInfo = null;
     private int mBackCameraIndex = -1;
     private boolean flag_back;
+    private int mOrientation;
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -237,48 +238,47 @@ public class CameraActivity extends AppCompatActivity implements BothWayProgress
         if (flag_back) {
             parameters.setFocusMode(Camera.Parameters.FOCUS_MODE_CONTINUOUS_VIDEO);
         }
-        mCamera.setParameters(parameters);
+        try {
+            mCamera.setParameters(parameters);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
     private void startMediaRecorder() {
-        CamcorderProfile mProfile = CamcorderProfile.get(CamcorderProfile.QUALITY_HIGH);
-
         mMediaRecorder = new MediaRecorder();
         mMediaRecorder.reset();
 
         // Step 1: Unlock and set camera to MediaRecorder
         mCamera.unlock();
         mMediaRecorder.setCamera(mCamera);
-        mMediaRecorder.setOrientationHint(90);//78后置摄像头选择90度，前置摄像头旋转270度
+        mMediaRecorder.setOrientationHint(mOrientation);
 
         // Step 2: Set sources
         mMediaRecorder.setAudioSource(MediaRecorder.AudioSource.DEFAULT);
         mMediaRecorder.setVideoSource(MediaRecorder.VideoSource.CAMERA);
 
-        // Step 3: Set a Camera Parameters
-        mMediaRecorder.setOutputFormat(mProfile.fileFormat);
-        /* 设置分辨率*/
-        mMediaRecorder.setVideoSize(mProfile.videoFrameWidth, mProfile.videoFrameHeight);
-        //视频文件的流畅度主要跟VideoFrameRate有关，参数越大视频画面越流畅，但实际中跟你的摄像头质量有很大关系
-        mMediaRecorder.setVideoFrameRate(mProfile.videoFrameRate);
-        /* Encoding bit rate: 1 * 1024 * 1024*/
-        //设置帧频率，然后就清晰了 清晰度和录制文件大小主要和EncodingBitRate有关，参数越大越清晰，同时录制的文件也越大
-        mMediaRecorder.setVideoEncodingBitRate(mProfile.videoBitRate);
-        mMediaRecorder.setAudioEncodingBitRate(mProfile.audioBitRate);
+        // Step 3 : 设置输出视频文件的格式和编码
+        CamcorderProfile mCamcorderProfile;
+        if(flag_back == true){
+            mCamcorderProfile = CamcorderProfile.get(mBackCameraIndex, CamcorderProfile.QUALITY_HIGH);
+        }
+        else{
+            mCamcorderProfile = CamcorderProfile.get(mFrontCameraIndex, CamcorderProfile.QUALITY_HIGH);
+        }
 
-        mMediaRecorder.setAudioChannels(mProfile.audioChannels);
-        mMediaRecorder.setAudioSamplingRate(mProfile.audioSampleRate);
-        // 视频录制格式
-        mMediaRecorder.setVideoEncoder(mProfile.videoCodec);
-        mMediaRecorder.setAudioEncoder(mProfile.audioCodec);
+        mMediaRecorder.setProfile(mCamcorderProfile);
+        mMediaRecorder.setVideoSize(mCamcorderProfile.videoFrameWidth, mCamcorderProfile.videoFrameHeight);
+        mMediaRecorder.setAudioSamplingRate(44100);
 
-        // Step 4: Set output file
+        //
         mMediaRecorder.setOutputFile(getOutputMediaFile().toString());
+
+        //
         mMediaRecorder.setPreviewDisplay(mSurfaceHolder.getSurface());
+
         try {
-            //准备录制
             mMediaRecorder.prepare();
-            // 开始录制
             mMediaRecorder.start();
             mIsRecording = true;
         } catch (IOException e) {
@@ -300,19 +300,22 @@ public class CameraActivity extends AppCompatActivity implements BothWayProgress
                 }
 
                 mMediaRecorder.reset();
+                try {
+                    mMediaRecorder.stop();
+                }catch (Exception e){
+                    e.printStackTrace();
+                }
                 mMediaRecorder.release();
+                mCamera.lock();
                 mMediaRecorder = null;
                 mIsRecording = false;
                 isRunning = false;
-                try {
-                    mCamera.reconnect();
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
+//                }
             }
         }
     }
 
+    // 拍摄完成跳转预览
     private void jumpToPreview() {
         videoUri = Uri.fromFile(mTargetFile);
         Intent intent = new Intent(this, PreviewActivity.class);
@@ -328,6 +331,7 @@ public class CameraActivity extends AppCompatActivity implements BothWayProgress
         flag_control = 0;
         mProgressBar.setVisibility(View.INVISIBLE);
         stopMediaRecorder();
+        jumpToPreview();
     }
 
     // 文件保存在/Android/data/#package#/file/..
@@ -382,11 +386,12 @@ public class CameraActivity extends AppCompatActivity implements BothWayProgress
                 break;
         }
         int result;
-        if (cameraInfo.facing == Camera.CameraInfo.CAMERA_FACING_FRONT) {
-            result = (cameraInfo.orientation + degrees) % 360;
-            result = (360 - result) % 360;  // compensate the mirror
+        if (flag_back == false) {
+            result = (270 + 180 - degrees) % 360;
+            mOrientation = result + 180;
         } else {  // back-facing
-            result = (cameraInfo.orientation - degrees + 360) % 360;
+            result = (90 - degrees + 360) % 360;
+            mOrientation = result;
         }
         return result;
     }
