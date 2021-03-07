@@ -2,6 +2,7 @@ package me.laijingzhi.short_video_app;
 
 import android.content.Intent;
 import android.graphics.PixelFormat;
+import android.graphics.Point;
 import android.hardware.Camera;
 import android.media.CamcorderProfile;
 import android.media.MediaRecorder;
@@ -245,20 +246,12 @@ public class CameraActivity extends AppCompatActivity implements BothWayProgress
         Camera.Parameters parameters = mCamera.getParameters();
         // 设置预览尺寸
         List<Camera.Size> supportedPreviewSizes = parameters.getSupportedPreviewSizes();
-        for (Camera.Size previewSize : supportedPreviewSizes) {
-            if ((float) previewSize.width / previewSize.height == aspectRatio && previewSize.height <= shortSide && previewSize.width <= longSide) {
-                parameters.setPreviewSize(previewSize.width, previewSize.height);
-                break;
-            }
-        }
+        Camera.Size previewSize = getCloselyPreSize(longSide, shortSide, supportedPreviewSizes);
+        parameters.setPreviewSize(previewSize.width, previewSize.height);
         // 设置照片尺寸
-        List<Camera.Size> supportedPictureSizes = parameters.getSupportedPictureSizes();
-        for (Camera.Size pictureSize : supportedPictureSizes) {
-            if ((float) pictureSize.width / pictureSize.height == aspectRatio) {
-                parameters.setPictureSize(pictureSize.width, pictureSize.height);
-                break;
-            }
-        }
+//        List<Camera.Size> supportedPictureSizes = parameters.getSupportedPictureSizes();
+//        Camera.Size pictureSize = getCloselyPicSize(longSide, shortSide, supportedPictureSizes);
+//        parameters.setPictureSize(pictureSize.width, pictureSize.height);
         //设置持续聚焦
         if (flag_back) {
             parameters.setFocusMode(Camera.Parameters.FOCUS_MODE_CONTINUOUS_VIDEO);
@@ -269,6 +262,50 @@ public class CameraActivity extends AppCompatActivity implements BothWayProgress
             e.printStackTrace();
         }
     }
+
+    private Camera.Size getCloselyPreSize(int longSide, int shortSide, List<Camera.Size> supportedPreviewSizes) {
+        for(Camera.Size size : supportedPreviewSizes){
+            if((size.width == longSide) && (size.height == shortSide)){
+                return size;
+            }
+        }
+        // 得到与传入的宽高比最接近的size
+        float reqRatio = ((float) longSide) / shortSide;
+        float curRatio, deltaRatio;
+        float deltaRatioMin = Float.MAX_VALUE;
+        Camera.Size retSize = null;
+        for (Camera.Size size : supportedPreviewSizes) {
+            curRatio = ((float) size.width) / size.height;
+            deltaRatio = Math.abs(reqRatio - curRatio);
+            if (deltaRatio < deltaRatioMin) {
+                deltaRatioMin = deltaRatio;
+                retSize = size;
+            }
+        }
+        return retSize;
+    }
+
+//    private Camera.Size getCloselyPicSize(int longSide, int shortSide, List<Camera.Size> supportedPictureSizes) {
+//        for(Camera.Size size : supportedPictureSizes){
+//            if((size.width == longSide) && (size.height == shortSide)){
+//                return size;
+//            }
+//        }
+//        // 得到与传入的宽高比最接近的size
+//        float reqRatio = ((float) longSide) / shortSide;
+//        float curRatio, deltaRatio;
+//        float deltaRatioMin = Float.MAX_VALUE;
+//        Camera.Size retSize = null;
+//        for (Camera.Size size : supportedPictureSizes) {
+//            curRatio = ((float) size.width) / size.height;
+//            deltaRatio = Math.abs(reqRatio - curRatio);
+//            if (deltaRatio < deltaRatioMin) {
+//                deltaRatioMin = deltaRatio;
+//                retSize = size;
+//            }
+//        }
+//        return retSize;
+//    }
 
     private void startMediaRecorder() {
         mMediaRecorder = new MediaRecorder();
